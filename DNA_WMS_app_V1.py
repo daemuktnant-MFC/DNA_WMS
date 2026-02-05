@@ -538,4 +538,5 @@ elif menu == "6. Add New Item (เพิ่มสินค้าใหม่)":
                             st.write(f"🔗 Link รูปภาพ: [Click Here]({image_link})")
                             
                 except Exception as e:
+
                     st.error(f"เกิดข้อผิดพลาด: {e}")
