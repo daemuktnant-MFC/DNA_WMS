@@ -28,14 +28,28 @@ st.set_page_config(page_title="WMS System", page_icon="📦")
 # 1. AUTHENTICATION (SHEET + DRIVE)
 # ==========================================
 
-# 1.1 เชื่อมต่อ Google Sheets (Service Account เดิม)
+# 1.1 เชื่อมต่อ Google Sheets (รองรับทั้ง Local File และ Streamlit Secrets)
 @st.cache_resource
 def init_connection():
     try:
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(current_dir, 'service_account.json')
-        
-        gc = gspread.service_account(filename=json_path)
+        # กรณีรันบน Streamlit Cloud (อ่านจาก Secrets)
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            # แปลง private_key ให้ถูกต้อง (บางทีการวางใน secrets อาจมีปัญหาเรื่อง \n)
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+            gc = gspread.service_account_from_dict(creds_dict)
+            
+        # กรณีรันบนเครื่อง Local (อ่านจากไฟล์ service_account.json)
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            json_path = os.path.join(current_dir, 'service_account.json')
+            if os.path.exists(json_path):
+                gc = gspread.service_account(filename=json_path)
+            else:
+                st.error("❌ ไม่พบไฟล์ service_account.json และไม่พบ Secrets บน Cloud")
+                st.stop()
+
         sh_wms = gc.open("WMS_Database")
         try:
             sh_master = gc.open("Master_Data")
@@ -44,6 +58,7 @@ def init_connection():
             st.stop()
 
         return sh_wms, sh_master
+
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาดในการเชื่อมต่อ Sheet: {e}")
         st.stop()
@@ -540,3 +555,4 @@ elif menu == "6. Add New Item (เพิ่มสินค้าใหม่)":
                 except Exception as e:
 
                     st.error(f"เกิดข้อผิดพลาด: {e}")
+
